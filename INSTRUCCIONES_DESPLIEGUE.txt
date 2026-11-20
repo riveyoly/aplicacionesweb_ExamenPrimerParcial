@@ -1,0 +1,212 @@
+=====================================================================
+  INSTRUCCIONES DE DESPLIEGUE - SISTEMA DE GESTION DE PROYECTOS
+  ASP.NET Core MVC + ENTITY FRAMEWORK CORE (CODE FIRST) + POSTGRESQL
+  Evaluacion 1 - Yolanda Rivera
+=====================================================================
+
+QUE HACE EL SISTEMA
+-------------------
+Gestiona proyectos y empleados, y permite asignar empleados a
+proyectos (un empleado puede estar en varios proyectos y un proyecto
+tiene varios empleados).
+
+   Proyectos    (proyecto_id, nombre, descripcion, fecha_inicio, fecha_fin)
+   Empleados    (empleado_id, nombre, apellido, email, posicion)
+   Asignaciones (asignacion_id, proyecto_id, empleado_id, rol,
+                 fecha_asignacion)   <- tabla intermedia
+
+
+ESTRUCTURA DEL PROYECTO (PATRON MVC + CODE FIRST)
+-------------------------------------------------
+YOLANDA_RIVERA_EVALUACION_1/
+ |-- INSTRUCCIONES_DESPLIEGUE.txt  Este archivo.
+ |-- README.md                   Resumen del proyecto.
+ |-- GestionProyectos.slnx       Solucion (se abre con Visual Studio).
+ |-- .env.example                Plantilla de la conexion a PostgreSQL.
+ |-- .gitignore                  Archivos que NO se suben a git.
+ |-- dotnet-tools.json           Herramienta dotnet-ef (migraciones).
+ |-- Database/                   Scripts SQL:
+ |    |-- 00_crear_base_datos.sql    crea la base gestion_proyectos
+ |    |-- 01_crear_tablas.sql        tablas, indices y restricciones
+ |    `-- 02_datos_prueba.sql        datos de ejemplo (opcional)
+ `-- src/GestionProyectos/
+      |-- Program.cs             Inicio de la aplicacion y rutas.
+      |-- appsettings.json       Configuracion general.
+      |-- Models/                MODELOS: Proyecto, Empleado, Asignacion
+      |                          (definen las tablas: Code First).
+      |-- Data/                  AppDbContext (nombres de tablas y
+      |                          columnas), conexion y datos iniciales.
+      |-- Migrations/            Migracion generada por EF Core.
+      |-- Services/              Reglas de negocio.
+      |-- Controllers/           CONTROLADORES: Home, Proyectos,
+      |                          Empleados, Asignaciones.
+      |-- ViewModels/            Datos que necesita cada pantalla.
+      |-- Views/                 VISTAS (paginas .cshtml).
+      `-- wwwroot/               Estilos, Bootstrap y JavaScript.
+
+
+QUE ES "CODE FIRST"
+-------------------
+Primero se escriben las CLASES en C# (carpeta Models) y Entity
+Framework Core genera la base de datos a partir de ellas:
+
+   1. Clases C# + AppDbContext    definen tablas y columnas.
+   2. dotnet ef migrations add    genera la carpeta Migrations/.
+   3. dotnet ef migrations script genera el SQL (01_crear_tablas.sql).
+
+Por eso hay dos formas de crear las tablas (Paso 2): ejecutar los
+scripts SQL, o dejar que la aplicacion las cree sola al arrancar.
+
+
+REQUISITOS PREVIOS
+------------------
+1. SDK de .NET 10 (gratis en https://dotnet.microsoft.com/download).
+   Para comprobarlo, en una terminal:   dotnet --list-sdks
+   Debe aparecer una version que empiece con 10.
+   (Con Visual Studio 2026 y "Desarrollo de ASP.NET y web" ya viene
+   incluido.)
+2. PostgreSQL instalado y en ejecucion, con pgAdmin. Se necesita la
+   contrasena del usuario "postgres".
+3. Internet la primera vez que se compila: .NET descarga los paquetes
+   de Entity Framework Core y Npgsql.
+
+
+PASO 1 - CREAR LA BASE DE DATOS
+-------------------------------
+1. Abrir pgAdmin y conectarse al servidor.
+2. Clic derecho en "Databases" > Create > Database...
+   Nombre: gestion_proyectos   > Save.
+   (O abrir el Query Tool sobre la base "postgres" y ejecutar
+   Database\00_crear_base_datos.sql)
+
+
+PASO 2 - CREAR LAS TABLAS
+-------------------------
+Opcion A - Con los scripts SQL:
+   1. Seleccionar la base "gestion_proyectos" y abrir el Query Tool
+      (menu Tools > Query Tool).
+   2. Abrir y ejecutar (F5), EN ESTE ORDEN:
+         Database\01_crear_tablas.sql
+         Database\02_datos_prueba.sql   (opcional, datos de ejemplo)
+
+Opcion B - Automatica (Code First):
+   No ejecutar los scripts. Al iniciar la aplicacion (Paso 4), Entity
+   Framework crea las tablas y carga los datos de ejemplo si la base
+   esta vacia.
+
+Las dos opciones dejan la misma estructura. Si se usa la opcion A,
+la aplicacion detecta que las tablas ya existen y no las vuelve a
+crear.
+
+
+PASO 3 - CONFIGURAR LA CONEXION (.env)
+--------------------------------------
+1. En la carpeta del proyecto, copiar el archivo .env.example y
+   nombrar la copia como  .env
+      En una terminal:  copy .env.example .env
+2. Abrir .env con el Bloc de notas y completar:
+
+      DB_HOST=localhost
+      DB_PORT=5432
+      POSTGRES_DB=gestion_proyectos
+      POSTGRES_USER=postgres
+      POSTGRES_PASSWORD=TU_CONTRASENA
+
+   - Reemplazar TU_CONTRASENA por la contrasena de postgres.
+   - Si PostgreSQL usa otro puerto (por ejemplo 5433), cambiar DB_PORT.
+3. Guardar.
+
+La contrasena solo vive en .env; no esta escrita en el codigo y el
+archivo .env NO se sube a git (esta en .gitignore).
+
+
+PASO 4 - EJECUTAR LA APLICACION
+-------------------------------
+OPCION A - Con la terminal, en la carpeta del proyecto:
+   dotnet run --project src/GestionProyectos
+
+   Esperar el mensaje:  Now listening on: http://localhost:5117
+   Para detener la aplicacion: Ctrl + C
+
+OPCION B - Con Visual Studio:
+   Abrir GestionProyectos.slnx y presionar F5.
+   El navegador se abre solo.
+
+
+PASO 5 - ABRIR LA APLICACION
+----------------------------
+En el navegador:   http://localhost:5117
+
+Aparece la pagina "Bienvenida YOLANDA" con el resumen. Desde el menu:
+   - Proyectos:    crear, buscar, ver, editar y eliminar proyectos.
+                   En "Ver" se asignan empleados al proyecto.
+   - Empleados:    crear, buscar, ver, editar y eliminar empleados.
+                   En "Ver" se asigna el empleado a un proyecto.
+   - Asignaciones: lista de todas las asignaciones, filtro por
+                   proyecto o empleado, nueva asignacion y quitar.
+
+Estado de la conexion:  http://localhost:5117/health  -> Healthy
+
+
+REGLAS QUE VALIDA EL SISTEMA
+----------------------------
+- La fecha de fin no puede ser anterior a la fecha de inicio.
+- No puede haber dos proyectos con el mismo nombre.
+- El correo del empleado debe ser valido y no repetirse.
+- Un empleado no puede asignarse dos veces al mismo proyecto.
+- No se asignan empleados a proyectos finalizados.
+- La fecha de asignacion debe estar dentro de las fechas del proyecto.
+- Al eliminar un proyecto o un empleado se eliminan sus asignaciones.
+
+
+COMO FUNCIONA EL MVC EN ESTE PROYECTO
+-------------------------------------
+1. El usuario entra, por ejemplo, a /Proyectos
+2. La ruta envia la peticion al metodo Index() de ProyectosController.
+3. El controlador consulta el MODELO con Entity Framework
+   (AppDbContext.Proyectos), que genera el SQL para PostgreSQL.
+4. El controlador entrega la lista a la VISTA
+   Views/Proyectos/Index.cshtml, que la muestra en una tabla.
+
+
+VOLVER A GENERAR LOS SCRIPTS (SI SE CAMBIAN LOS MODELOS)
+--------------------------------------------------------
+En la carpeta del proyecto:
+   dotnet tool restore
+   dotnet ef migrations add NombreDelCambio --project src/GestionProyectos
+   dotnet ef migrations script --project src/GestionProyectos -o Database/01_crear_tablas.sql
+
+
+SUBIR EL CODIGO A GIT (GITHUB)
+------------------------------
+1. Crear un repositorio vacio en GitHub (sin README ni .gitignore).
+2. En una terminal, dentro de la carpeta del proyecto:
+
+   git init
+   git add .
+   git commit -m "Sistema de gestion de proyectos - Evaluacion 1"
+   git branch -M main
+   git remote add origin <URL-del-repositorio>
+   git push -u origin main
+
+3. Antes del commit, revisar con  git status  que .env NO aparezca.
+
+
+SOLUCION DE PROBLEMAS
+---------------------
+- "dotnet no se reconoce como un comando":
+     falta instalar el SDK de .NET 10, o cerrar y abrir la terminal
+     despues de instalarlo.
+- Error "NU1301" al compilar:
+     no hay internet para descargar los paquetes la primera vez.
+- "password authentication failed for user postgres":
+     revisar POSTGRES_PASSWORD en el archivo .env.
+- "database gestion_proyectos does not exist":
+     falta el Paso 1, o el nombre en POSTGRES_DB es distinto.
+- La aplicacion no conecta (Connection refused):
+     PostgreSQL no esta encendido o usa otro puerto: revisar DB_PORT.
+- "relation proyectos already exists" al ejecutar 01_crear_tablas.sql:
+     las tablas ya fueron creadas (por la aplicacion o una ejecucion
+     anterior); no hace falta volver a ejecutarlo.
+- "Ya existe un proyecto con este nombre" / "Ya existe un empleado
+  con este correo": el dato ya esta registrado; usar otro o editarlo.
